@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Windows.Forms;
 using System;
+using System.Drawing;
+using System.ComponentModel;
 
 namespace Test01
 {
@@ -14,12 +16,17 @@ namespace Test01
         {
             InitializeComponent();
 
-
             // Обработчик события изменения значения в ComboBox
             comboBox1.SelectedIndexChanged += ComboBox1_SelectedIndexChanged;
 
             // Инициализируем форму
             LoadData();
+
+            // Установим счетчик товаров в заголовок DataGridView
+            UpdateProductCountLabel();
+
+
+            dataGridView1.CellFormatting += dataGridView1_CellFormatting;
         }
 
         private void LoadData()
@@ -38,6 +45,7 @@ namespace Test01
                 {
                     dataSource.Add(new ProductCell()
                     {
+
                         Id = product.Id,
                         Name = product.Name,
                         Description = product.Description,
@@ -56,9 +64,6 @@ namespace Test01
                 var imageColumn = (DataGridViewImageColumn)dataGridView1.Columns["Image"];
                 imageColumn.ImageLayout = DataGridViewImageCellLayout.Zoom;
             }
-
-            // Установим счетчик товаров в заголовок DataGridView
-            UpdateProductCountLabel();
         }
 
         private void ComboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -103,10 +108,12 @@ namespace Test01
 
         private void UpdateProductCountLabel()
         {
-            if (dataGridView1.DataSource is List<ProductCell> productList)
+            if (filteredData != null)
             {
-                int productCount = productList.Count;
-                labelProductCount.Text = $"Товаров: {productCount}";
+                int totalProducts = dataSource.Count;
+                int displayedProducts = filteredData.Count;
+
+                labelProductCount.Text = $"Товаров {displayedProducts} из {totalProducts}";
             }
         }
 
@@ -129,5 +136,66 @@ namespace Test01
 
             return false;
         }
+
+        private void dataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (dataGridView1.Columns[e.ColumnIndex].Name == "Discount")
+            {
+                // Получаем значение ячейки
+                object cellValue = e.Value;
+
+                // Проверяем условие и устанавливаем цвет фона
+                if (cellValue != null)
+                {
+                    decimal value = Convert.ToDecimal(cellValue);
+
+                    if (value > 15) // Замените это условие на нужное вам
+                    {
+                        e.CellStyle.BackColor = Color.Chartreuse;
+                        e.CellStyle.ForeColor = Color.White;
+                    }
+                    else
+                    {
+                        // Возвращаем стандартные цвета, если условие не выполняется
+                        e.CellStyle.BackColor = dataGridView1.DefaultCellStyle.BackColor;
+                        e.CellStyle.ForeColor = dataGridView1.DefaultCellStyle.ForeColor;
+                    }
+                }
+            }
+        }
+
+
+
+        private void comboBoxSortOrder_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBoxSortOrder_SelectedIndexChanged_1(object sender, EventArgs e)
+        {
+            SortDataGridViewByPrice(comboBoxSortOrder.SelectedItem.ToString());
+        }
+
+        private void SortDataGridViewByPrice(string selectedSortOrder)
+        {
+            List<ProductCell> sortedList;
+
+            switch (selectedSortOrder)
+            {
+                case "По возрастанию":
+                    sortedList = filteredData.OrderBy(p => p.Price).ToList();
+                    break;
+                case "По убыванию":
+                    sortedList = filteredData.OrderByDescending(p => p.Price).ToList();
+                    break;
+                default:
+                    sortedList = filteredData.ToList();
+                    break;
+            }
+
+            dataGridView1.DataSource = new BindingList<ProductCell>(sortedList);
+        }
     }
+
+
 }
